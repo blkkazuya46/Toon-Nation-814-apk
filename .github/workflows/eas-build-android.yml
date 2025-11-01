@@ -12,14 +12,27 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install CLIs
+      - name: Install CLIs & tools
         run: |
           npm i -g eas-cli
           sudo apt-get update -y
-          sudo apt-get install -y jq
+          sudo apt-get install -y jq uuid-runtime
 
       - name: Install deps
         run: npm i
+
+      # Inject an EAS projectId into app.json for this CI run only
+      - name: Configure EAS projectId (CI-only)
+        env:
+          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          PROJECT_ID=$(uuidgen)
+          jq --arg pid "$PROJECT_ID" '
+            .expo.extra = (.expo.extra // {}) |
+            .expo.extra.eas = (.expo.extra.eas // {}) |
+            .expo.extra.eas.projectId = $pid
+          ' app.json > app.tmp && mv app.tmp app.json
+          cat app.json
 
       - name: Build Android (APK) with Expo EAS
         env:
@@ -44,3 +57,4 @@ jobs:
         with:
           name: app-preview.apk
           path: app-preview.apk
+
