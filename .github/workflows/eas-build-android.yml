@@ -21,18 +21,25 @@ jobs:
       - name: Install deps
         run: npm i
 
-      # Inject an EAS projectId into app.json for this CI run only
+      # Create a projectId in app.json for this CI run
       - name: Configure EAS projectId (CI-only)
-        env:
-          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
         run: |
           PROJECT_ID=$(uuidgen)
+          echo "PROJECT_ID=$PROJECT_ID"
           jq --arg pid "$PROJECT_ID" '
             .expo.extra = (.expo.extra // {}) |
             .expo.extra.eas = (.expo.extra.eas // {}) |
             .expo.extra.eas.projectId = $pid
           ' app.json > app.tmp && mv app.tmp app.json
           cat app.json
+
+      # 🔑 Link the repo to that EAS project id (non-interactive)
+      - name: Init/link EAS project
+        env:
+          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
+        run: |
+          eas init --id $(jq -r '.expo.extra.eas.projectId' app.json) --non-interactive || true
+          eas project:info || true
 
       - name: Build Android (APK) with Expo EAS
         env:
@@ -49,12 +56,10 @@ jobs:
           echo "APK_URL=$URL" >> $GITHUB_OUTPUT
 
       - name: Download APK
-        run: |
-          curl -L "${{ steps.latest.outputs.APK_URL }}" -o app-preview.apk
+        run: curl -L "${{ steps.latest.outputs.APK_URL }}" -o app-preview.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-preview.apk
           path: app-preview.apk
-
