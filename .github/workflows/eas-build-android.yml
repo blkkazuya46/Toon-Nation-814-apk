@@ -32,6 +32,15 @@ jobs:
             .expo.extra.eas.projectId = $pid
           ' app.json > app.tmp && mv app.tmp app.json
           cat app.json
+# Link the repo to that EAS project id (non-interactive)
+- name: Init/link EAS project
+  env:
+    EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
+  run: |
+    PID=$(jq -r '.expo.extra.eas.projectId' app.json)
+    echo "Using EAS projectId: $PID"
+    eas init --id "$PID" --non-interactive || true
+    eas project:info || true
 
       # 🔑 Link the repo to that EAS project id (non-interactive)
       - name: Init/link EAS project
