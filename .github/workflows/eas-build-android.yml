@@ -6,23 +6,25 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install CLIs & tools
         run: |
           npm i -g eas-cli
           sudo apt-get update -y
-          sudo apt-get install -y jq uuid-runtime
+          sudo apt-get install -y jq uuid-runtime curl
 
       - name: Install deps
         run: npm i
 
-      # Create a projectId in app.json for this CI run
-      - name: Configure EAS projectId (CI-only)
+      # CI-only: ensure app.json has an EAS projectId for this run
+      - name: Inject EAS projectId into app.json
         run: |
           PROJECT_ID=$(uuidgen)
           echo "PROJECT_ID=$PROJECT_ID"
@@ -31,41 +33,40 @@ jobs:
             .expo.extra.eas = (.expo.extra.eas // {}) |
             .expo.extra.eas.projectId = $pid
           ' app.json > app.tmp && mv app.tmp app.json
+          echo "===== app.json after injection ====="
           cat app.json
-# Link the repo to that EAS project id (non-interactive)
-- name: Init/link EAS project
-  env:
-    EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
-  run: |
-    PID=$(jq -r '.expo.extra.eas.projectId' app.json)
-    echo "Using EAS projectId: $PID"
-    eas init --id "$PID" --non-interactive || true
-    eas project:info || true
 
-      # 🔑 Link the repo to that EAS project id (non-interactive)
-      - name: Init/link EAS project
+      # Link repo to that project id (non-interactive)
+      - name: Init / link EAS project
         env:
           EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
         run: |
-          eas init --id $(jq -r '.expo.extra.eas.projectId' app.json) --non-interactive || true
+          PID=$(jq -r '.expo.extra.eas.projectId' app.json)
+          echo "Using EAS projectId: $PID"
+          # Create/link the project if needed
+          eas init --id "$PID" --non-interactive || true
+          # Make sure EAS Build config exists without prompts
+          eas build:configure --platform android --non-interactive || true
           eas project:info || true
 
-      - name: Build Android (APK) with Expo EAS
+      - name: Build Android (APK)
         env:
           EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
         run: |
           eas build --platform android --non-interactive --profile preview
 
       - name: Get latest build URL
+        id: latest
         env:
           EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
-        id: latest
         run: |
           URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
           echo "APK_URL=$URL" >> $GITHUB_OUTPUT
+          echo "Build URL: $URL"
 
       - name: Download APK
-        run: curl -L "${{ steps.latest.outputs.APK_URL }}" -o app-preview.apk
+        run: |
+          curl -L "${{ steps.latest.outputs.APK_URL }}" -o app-preview.apk
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
