@@ -1,18 +1,20 @@
 name: EAS Build (Android)
+
 on:
   workflow_dispatch:
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    env:
+      EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Install CLIs & tools
         run: |
@@ -23,62 +25,11 @@ jobs:
       - name: Install deps
         run: npm i
 
-      # 1) Ensure a REAL Expo project exists and get its projectId
-      - name: Ensure Expo project exists and fetch projectId
-        id: ensure
-        env:
-          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
-        run: |
-          set -e
-          # Try to read existing project info
-          INFO=$(eas project:info --json || echo '{}')
-          PID=$(echo "$INFO" | jq -r '.projectId // empty')
+      - name: Build Android (APK) with Expo EAS
+        run: eas build --platform android --non-interactive --profile preview
 
-          if [ -z "$PID" ] || [ "$PID" = "null" ]; then
-            echo "No project found on Expo. Creating one..."
-            eas project:create \
-              --type expo-managed \
-              --name "Toon Nation 814" \
-              --slug "toon-nation-814-apk" \
-              --non-interactive
-            PID=$(eas project:info --json | jq -r '.projectId')
-          fi
-
-          echo "USING_PROJECT_ID=$PID"
-          echo "project_id=$PID" >> $GITHUB_OUTPUT
-
-      # 2) Inject that real projectId into app.json for this CI run
-      - name: Inject projectId into app.json
-        run: |
-          PID="${{ steps.ensure.outputs.project_id }}"
-          jq --arg pid "$PID" '
-            .expo.extra = (.expo.extra // {}) |
-            .expo.extra.eas = (.expo.extra.eas // {}) |
-            .expo.extra.eas.projectId = $pid
-          ' app.json > app.tmp && mv app.tmp app.json
-          echo "===== app.json ====="
-          cat app.json
-
-      # 3) Make sure EAS build config exists (no prompts)
-      - name: Configure EAS Build (non-interactive)
-        env:
-          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
-        run: |
-          eas build:configure --platform android --non-interactive || true
-          eas project:info || true
-
-      # 4) Build the APK
-      - name: Build Android (APK)
-        env:
-          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
-        run: |
-          eas build --platform android --non-interactive --profile preview
-
-      # 5) Fetch URL and upload APK artifact
       - name: Get latest build URL
         id: latest
-        env:
-          EXPO_TOKEN: ${{ secrets.EAS_TOKEN }}
         run: |
           URL=$(eas build:list --platform android --status finished --limit 1 --json | jq -r '.[0].artifacts.buildUrl')
           echo "APK_URL=$URL" >> $GITHUB_OUTPUT
@@ -92,4 +43,5 @@ jobs:
         with:
           name: app-preview.apk
           path: app-preview.apk
+
 
