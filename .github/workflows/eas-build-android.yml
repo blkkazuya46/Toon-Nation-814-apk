@@ -18,12 +18,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Enable Corepack & install deps
+      - name: Install deps
         run: |
-          corepack enable
-          npm ci
+          npm install --no-audit --no-fund
 
-      # Auth + install Expo/EAS the right way (no global npm -g)
       - name: Expo login and setup
         uses: expo/expo-github-action@v8
         with:
@@ -34,6 +32,3 @@ jobs:
       - name: Build Android (APK)
         run: |
           npx eas-cli build --platform android --profile preview --non-interactive
-
-
-
