@@ -4,6 +4,7 @@ import Constants from 'expo-constants';
 import { WebView } from 'react-native-webview';
 
 export default function App() {
+  // Load your site from Expo config or fallback to Render
   const webUrl = Constants?.expoConfig?.extra?.webUrl || 'https://toon-nation-814.onrender.com';
   const topPad = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
 
@@ -21,3 +22,4 @@ export default function App() {
     </SafeAreaView>
   );
 }
+
