@@ -8,6 +8,7 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,21 +18,22 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Expo/EAS
+      - name: Enable Corepack & install deps
         run: |
-          npm i -g expo-cli eas-cli
+          corepack enable
           npm ci
 
-      - name: EAS Build (APK)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          eas build --platform android --profile preview --non-interactive
+      # Auth + install Expo/EAS the right way (no global npm -g)
+      - name: Expo login and setup
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Download build artifact url
-        if: always()
+      - name: Build Android (APK)
         run: |
-          echo "If the step above succeeds, the EAS job page will show the APK download link."
+          npx eas-cli build --platform android --profile preview --non-interactive
 
 
 
