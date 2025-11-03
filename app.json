@@ -2,7 +2,8 @@
   "expo": {
     "name": "Toon Nation 814",
     "slug": "toon-nation-814-apk",
-    "scheme": "toonnation814",
+    "owner": "tommy.bunnz",
+    "version": "1.0.0",
     "android": {
       "package": "com.toonnation814.app",
       "versionCode": 1
