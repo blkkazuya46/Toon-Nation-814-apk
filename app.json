@@ -2,14 +2,13 @@
   "expo": {
     "name": "Toon Nation 814",
     "slug": "toon-nation-814-apk",
-    "owner": "tommy.bunnz",
-    "version": "1.0.0",
     "android": {
       "package": "com.toonnation814.app",
       "versionCode": 1
     },
     "extra": {
-      "webUrl": "https://toon-nation-814.onrender.com"
+      "webUrl": "https://toon-nation-814.onrender.com",
+      "eas": { "projectId": "d5b78986-183a-4c6e-b9e2-2ab60332a5d2" }
     }
   }
 }
