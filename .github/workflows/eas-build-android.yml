@@ -9,7 +9,6 @@ permissions:
   contents: read
 
 env:
-  # Pull your token from GitHub → Settings → Secrets → Actions
   EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
 jobs:
@@ -25,38 +24,28 @@ jobs:
         with:
           node-version: '20'
 
-      # (Optional) Faster reinstalls if you add a lockfile later
-      - name: Enable npm cache
-        run: npm config set cache ~/.npm --global
-
-      # --- Install Expo/EAS CLIs ---
       - name: Install Expo & EAS CLI
         run: |
           npm i -g expo-cli eas-cli
 
-      # --- Verify token is present (fail early if missing) ---
       - name: Verify EXPO_TOKEN exists
         run: |
           if [ -z "${EXPO_TOKEN}" ]; then
-            echo "EXPO_TOKEN is missing! Add it at: GitHub → Repo → Settings → Secrets → Actions → EXPO_TOKEN"
+            echo "EXPO_TOKEN is missing! Add it at: Settings → Secrets → Actions → EXPO_TOKEN"
             exit 1
           fi
-          echo "Token detected!"
+          echo "Token detected."
 
-      # --- Authenticate to Expo (non-interactive) ---
-      # eas respects EXPO_TOKEN automatically; whoami confirms it
       - name: Login to Expo using token
         run: |
           eas whoami || (echo "Authentication failed"; exit 1)
 
-      # --- Make sure the EAS project is linked (idempotent) ---
       - name: Ensure EAS project is linked
         run: |
           set -e
           eas project:info || eas project:init --force --non-interactive
 
-      # --- Install app deps (works with or without a lockfile) ---
-      - name: Install dependencies (best effort)
+      - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
             npm ci
@@ -64,15 +53,33 @@ jobs:
             npm i --no-audit --no-fund
           fi
 
-      # --- PRE-BUNDLE so Metro errors surface before gradle ---
-      # (Fix for "react-native depends on @react-native-community/cli")
+      # ---------- FIX: add Metro config if repo doesn't have one ----------
+      - name: Create metro.config.js if missing
+        run: |
+          if [ ! -f metro.config.js ]; then
+            cat > metro.config.js <<'EOF'
+            // Minimal Expo Metro config
+            const { getDefaultConfig } = require('expo/metro-config');
+            const config = getDefaultConfig(__dirname);
+            module.exports = config;
+            EOF
+            echo "Created metro.config.js"
+          else
+            echo "metro.config.js already exists"
+          fi
+
+      # RN CLI is needed for bundling step
       - name: Add RN CLI for bundling
         run: npm i -D @react-native-community/cli@latest
 
       - name: Pre-bundle JS to surface Metro errors early
         run: |
-          # Ensure Expo entry point is correct
-          jq '.main="node_modules/expo/AppEntry.js"' package.json > package.tmp && mv package.tmp package.json
+          # Ensure Expo entry point in package.json
+          if ! node -e "const p=require('./package.json');process.exit(p.main==='node_modules/expo/AppEntry.js'?0:1)"; then
+            node -e "const fs=require('fs');const p=require('./package.json');p.main='node_modules/expo/AppEntry.js';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
+            echo "Set package.json main to Expo AppEntry"
+          fi
+
           npx react-native bundle \
             --entry-file node_modules/expo/AppEntry.js \
             --platform android \
@@ -81,12 +88,7 @@ jobs:
             --bundle-output /tmp/index.android.bundle \
             --assets-dest /tmp/assets
 
-      # --- Build the APK on EAS ---
       - name: Build Android (APK)
         run: |
-          # Uses your "preview" profile from eas.json. Change if needed.
           eas build --platform android --profile preview --non-interactive
 
-      # (Optional) You can add an artifacts upload step here once the build succeeds
-      # - name: Upload build URL
-      #   run: echo "Check the EAS build page for the APK download link."
