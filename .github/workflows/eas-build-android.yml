@@ -1,4 +1,3 @@
-
 name: build-android
 
 on:
@@ -14,15 +13,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # No npm cache here (it needs a lockfile). Keep it simple.
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+
+      # If there’s no lockfile, create one so installs are stable
+      - name: Create lockfile if missing
+        run: |
+          if [ ! -f package-lock.json ]; then
+            npm install --package-lock-only
+          fi
 
       - name: Install Expo & EAS CLI
-        run: |
-          npm i -g expo-cli eas-cli
+        run: npm i -g expo-cli eas-cli
 
       - name: Verify EXPO_TOKEN exists
         run: |
@@ -36,12 +41,10 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
-      # Link (or reuse) EAS project without interactivity
       - name: Ensure EAS project is linked
         run: |
           set -e
-          # If already linked, project:info succeeds; otherwise init with --force-non-interactive
-          eas project:info || eas init --id $(uuidgen) --force --non-interactive
+          eas project:info || eas init --force --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
@@ -50,8 +53,6 @@ jobs:
           if [ -f package-lock.json ]; then npm ci; else npm i; fi
 
       - name: Build Android (APK)
-        run: |
-          eas build --platform android --profile production --non-interactive
+        run: eas build --platform android --profile production --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
