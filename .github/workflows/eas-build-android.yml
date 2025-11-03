@@ -2,6 +2,8 @@ name: build-android
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build-android:
@@ -16,17 +18,25 @@ jobs:
         with:
           node-version: 20
 
-      - name: Expo login and setup
+      # Install Expo & EAS CLIs (global)
+      - name: Install Expo/EAS CLIs
+        run: |
+          npm i -g expo-cli eas-cli
+
+      # Use npm install (not npm ci) so we don't need a pre-existing lockfile
+      - name: Install deps
+        run: |
+          npm install --no-audit --no-fund
+
+      # Make sure we are authenticated with your Expo account using the token
+      - name: Expo login (with token)
         uses: expo/expo-github-action@v8
         with:
-          expo-version: latest
+          expo-version: 6.3.10
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Install deps
-        run: npm install
-
+      # Build an APK (profile "preview")
       - name: Build Android (APK)
-        run: eas build --platform android --profile preview --non-interactive
-        env:
-            EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas build --platform android --profile preview --non-interactive
