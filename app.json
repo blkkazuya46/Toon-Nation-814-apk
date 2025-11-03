@@ -1,26 +1,15 @@
-import React from 'react';
-import { SafeAreaView, Platform, StatusBar } from 'react-native';
-import Constants from 'expo-constants';
-import { WebView } from 'react-native-webview';
-
-export default function App() {
-  const webUrl =
-    Constants?.expoConfig?.extra?.webUrl ||
-    'https://toon-nation-814.onrender.com';
-
-  const topPad = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
-
-  return (
-    <SafeAreaView style={{ flex: 1, paddingTop: topPad, backgroundColor: '#000' }}>
-      <WebView
-        source={{ uri: webUrl }}
-        javaScriptEnabled
-        domStorageEnabled
-        startInLoadingState
-        mixedContentMode="always"
-        allowsFullscreenVideo
-        originWhitelist={['*']}
-      />
-    </SafeAreaView>
-  );
+{
+  "expo": {
+    "name": "Toon Nation 814",
+    "slug": "toon-nation-814-apk",
+    "owner": "tommy.bunnz",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.toonnation814.app",
+      "versionCode": 1
+    },
+    "extra": {
+      "webUrl": "https://toon-nation-814.onrender.com"
+    }
+  }
 }
