@@ -14,7 +14,6 @@ env:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,20 +24,17 @@ jobs:
           node-version: '20'
 
       - name: Install Expo & EAS CLI
-        run: |
-          npm i -g expo-cli eas-cli
+        run: npm i -g expo-cli eas-cli
 
       - name: Verify EXPO_TOKEN exists
         run: |
           if [ -z "${EXPO_TOKEN}" ]; then
-            echo "EXPO_TOKEN is missing! Add it at: Settings → Secrets → Actions → EXPO_TOKEN"
-            exit 1
+            echo "EXPO_TOKEN is missing (Settings → Secrets → Actions → EXPO_TOKEN)"; exit 1;
           fi
           echo "Token detected."
 
       - name: Login to Expo using token
-        run: |
-          eas whoami || (echo "Authentication failed"; exit 1)
+        run: eas whoami
 
       - name: Ensure EAS project is linked
         run: |
@@ -47,48 +43,16 @@ jobs:
 
       - name: Install dependencies
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          else
-            npm i --no-audit --no-fund
-          fi
+          if [ -f package-lock.json ]; then npm ci; else npm i --no-audit --no-fund; fi
 
-      # ---------- FIX: add Metro config if repo doesn't have one ----------
-      - name: Create metro.config.js if missing
-        run: |
-          if [ ! -f metro.config.js ]; then
-            cat > metro.config.js <<'EOF'
-            // Minimal Expo Metro config
-            const { getDefaultConfig } = require('expo/metro-config');
-            const config = getDefaultConfig(__dirname);
-            module.exports = config;
-            EOF
-            echo "Created metro.config.js"
-          else
-            echo "metro.config.js already exists"
-          fi
-
-      # RN CLI is needed for bundling step
-      - name: Add RN CLI for bundling
-        run: npm i -D @react-native-community/cli@latest
-
+      # Optional pre-bundle (kept, now that metro.config.js is committed)
       - name: Pre-bundle JS to surface Metro errors early
         run: |
-          # Ensure Expo entry point in package.json
-          if ! node -e "const p=require('./package.json');process.exit(p.main==='node_modules/expo/AppEntry.js'?0:1)"; then
-            node -e "const fs=require('fs');const p=require('./package.json');p.main='node_modules/expo/AppEntry.js';fs.writeFileSync('package.json',JSON.stringify(p,null,2));"
-            echo "Set package.json main to Expo AppEntry"
-          fi
-
           npx react-native bundle \
             --entry-file node_modules/expo/AppEntry.js \
-            --platform android \
-            --dev false \
-            --reset-cache \
+            --platform android --dev false --reset-cache \
             --bundle-output /tmp/index.android.bundle \
             --assets-dest /tmp/assets
 
       - name: Build Android (APK)
-        run: |
-          eas build --platform android --profile preview --non-interactive
-
+        run: eas build --platform android --profile preview --non-interactive
