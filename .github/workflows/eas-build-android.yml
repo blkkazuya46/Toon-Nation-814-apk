@@ -18,25 +18,25 @@ jobs:
         with:
           node-version: 20
 
-      # Install Expo & EAS CLIs (global)
-      - name: Install Expo/EAS CLIs
-        run: |
-          npm i -g expo-cli eas-cli
-
-      # Use npm install (not npm ci) so we don't need a pre-existing lockfile
-      - name: Install deps
-        run: |
-          npm install --no-audit --no-fund
-
-      # Make sure we are authenticated with your Expo account using the token
+      # This installs expo/eas CLIs AND logs in using your EXPO_TOKEN secret
       - name: Expo login (with token)
         uses: expo/expo-github-action@v8
         with:
-          expo-version: 6.3.10
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      # Build an APK (profile "preview")
-      - name: Build Android (APK)
+      # If you don't have a lockfile, skip npm ci to avoid errors
+      - name: Install deps (best effort)
         run: |
-          eas build --platform android --profile preview --non-interactive
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f yarn.lock ]; then
+            yarn --frozen-lockfile
+          else
+            echo "No lockfile found; continuing..."
+          fi
+
+      - name: Build Android (APK)
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: eas build --platform android --profile preview --non-interactive
