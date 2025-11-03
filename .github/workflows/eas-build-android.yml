@@ -1,9 +1,6 @@
 name: build-android
-
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
 
 jobs:
   build-android:
@@ -16,54 +13,39 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Install EAS CLI
-        run: npm i -g eas-cli
+      - name: Install Expo & EAS CLI
+        run: |
+          npm i -g expo-cli eas-cli
 
       - name: Verify EXPO_TOKEN exists
         run: |
           if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
-            echo "EXPO_TOKEN is missing (GitHub → Settings → Secrets → Actions)."
+            echo "EXPO_TOKEN is missing! Add it in GitHub → Settings → Secrets → Actions"
             exit 1
           fi
-          echo "Token detected."
 
-      # 🔗 Link this repo to your Expo project for this run
+      - name: Login to Expo using token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas whoami || true
+          echo "Token present"
+
+      # 🔗 Force-link this repo to your existing EAS project (once per CI run is fine)
       - name: Ensure EAS project is linked
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
         run: |
           set -e
-          # If not linked yet, link it non-interactively using your Project ID
-          eas project:info || eas init --non-interactive --id "$EXPO_PROJECT_ID"
-          # Write the projectId into app.json/app.config.* for this run (no commit)
-          if [ -f app.json ]; then
-            node -e "
-              const fs=require('fs');
-              const p='app.json';
-              const j=JSON.parse(fs.readFileSync(p,'utf8'));
-              j.expo=j.expo||{};
-              j.expo.extra=j.expo.extra||{};
-              j.expo.extra.eas={projectId: process.env.EXPO_PROJECT_ID};
-              fs.writeFileSync(p, JSON.stringify(j,null,2));
-            "
-          fi
-
-      - name: Install dependencies (best effort)
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          elif [ -f package.json ]; then
-            npm i --no-fund
-          else
-            echo "No package.json found; skipping install."
-          fi
+          # Show info if already linked (don’t fail if not)
+          eas project:info || true
+          # Force init/link using your known projectId
+          eas init --id d5b78986-183a-4c6e-b9e2-2ab60332a5d2 --non-interactive --force
 
       - name: Build Android (APK)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas build --platform android --profile preview --non-interactive
-
-
+        run: |
+          eas build --platform android --profile preview --non-interactive --local-timezone
