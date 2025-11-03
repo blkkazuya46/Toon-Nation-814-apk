@@ -8,35 +8,50 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-    env:
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}   # makes the token available to all steps
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install Expo/EAS CLIs
+      - name: Install Expo & EAS CLI
         run: |
-          npm i -g expo-cli eas-cli
+          npm install -g expo-cli eas-cli
 
-      - name: Verify Expo auth
+      - name: Verify EXPO_TOKEN exists
         run: |
-          eas whoami || true
+          if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
+            echo "❌ EXPO_TOKEN is missing! Add it in GitHub → Settings → Secrets → Actions"
+            exit 1
+          else
+            echo "✅ Token detected!"
+          fi
 
-      - name: Install deps (best effort)
+      - name: Login to Expo using token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          eas whoami || expo whoami || echo "⚠️ Trying to authenticate..."
+          expo login --token $EXPO_TOKEN
+          eas whoami
+
+      - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
             npm ci
           elif [ -f yarn.lock ]; then
             yarn --frozen-lockfile
           else
-            echo "No lockfile found; continuing..."
+            npm install
           fi
 
-      - name: Build Android (APK)
-        run: eas build --platform android --profile preview --non-interactive
+      - name: Build Android APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          echo "🚀 Building APK..."
+          eas build --platform android --profile preview --non-interactive
