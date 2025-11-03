@@ -18,22 +18,38 @@ jobs:
         with:
           node-version: '20'
 
-      # Only EAS CLI — no expo-cli
       - name: Install EAS CLI
         run: npm i -g eas-cli
 
       - name: Verify EXPO_TOKEN exists
         run: |
           if [ -z "${{ secrets.EXPO_TOKEN }}" ]; then
-            echo "EXPO_TOKEN is missing! Add it in GitHub → Settings → Secrets → Actions"
+            echo "EXPO_TOKEN is missing (GitHub → Settings → Secrets → Actions)."
             exit 1
           fi
           echo "Token detected."
 
-      - name: Login to Expo (EAS)
+      # 🔗 Link this repo to your Expo project for this run
+      - name: Ensure EAS project is linked
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: eas whoami
+          EXPO_PROJECT_ID: ${{ secrets.EXPO_PROJECT_ID }}
+        run: |
+          set -e
+          # If not linked yet, link it non-interactively using your Project ID
+          eas project:info || eas init --non-interactive --id "$EXPO_PROJECT_ID"
+          # Write the projectId into app.json/app.config.* for this run (no commit)
+          if [ -f app.json ]; then
+            node -e "
+              const fs=require('fs');
+              const p='app.json';
+              const j=JSON.parse(fs.readFileSync(p,'utf8'));
+              j.expo=j.expo||{};
+              j.expo.extra=j.expo.extra||{};
+              j.expo.extra.eas={projectId: process.env.EXPO_PROJECT_ID};
+              fs.writeFileSync(p, JSON.stringify(j,null,2));
+            "
+          fi
 
       - name: Install dependencies (best effort)
         run: |
@@ -49,4 +65,5 @@ jobs:
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas build --platform android --profile preview --non-interactive
+
 
