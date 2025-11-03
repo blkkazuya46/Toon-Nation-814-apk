@@ -54,5 +54,7 @@ jobs:
             --bundle-output /tmp/index.android.bundle \
             --assets-dest /tmp/assets
 
-      - name: Build Android (APK)
-        run: eas build --platform android --profile preview --non-interactive
+  - name: Build Android (APK)
+  run: eas build --platform android --profile production --non-interactive
+
+
