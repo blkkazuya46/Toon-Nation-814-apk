@@ -5,7 +5,6 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,21 +30,17 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           eas whoami || true
-          echo "Token present"
 
-      # 🔗 Force-link this repo to your existing EAS project (once per CI run is fine)
       - name: Ensure EAS project is linked
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          set -e
-          # Show info if already linked (don’t fail if not)
           eas project:info || true
-          # Force init/link using your known projectId
           eas init --id d5b78986-183a-4c6e-b9e2-2ab60332a5d2 --non-interactive --force
 
       - name: Build Android (APK)
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
-          eas build --platform android --profile preview --non-interactive --local-timezone
+          eas build --platform android --profile preview --non-interactive
+
