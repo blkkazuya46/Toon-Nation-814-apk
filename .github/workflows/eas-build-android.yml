@@ -8,6 +8,8 @@ on:
 jobs:
   build-android:
     runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}   # makes the token available to all steps
 
     steps:
       - name: Checkout
@@ -18,14 +20,14 @@ jobs:
         with:
           node-version: 20
 
-      # This installs expo/eas CLIs AND logs in using your EXPO_TOKEN secret
-      - name: Expo login (with token)
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install Expo/EAS CLIs
+        run: |
+          npm i -g expo-cli eas-cli
 
-      # If you don't have a lockfile, skip npm ci to avoid errors
+      - name: Verify Expo auth
+        run: |
+          eas whoami || true
+
       - name: Install deps (best effort)
         run: |
           if [ -f package-lock.json ]; then
@@ -37,6 +39,4 @@ jobs:
           fi
 
       - name: Build Android (APK)
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: eas build --platform android --profile preview --non-interactive
