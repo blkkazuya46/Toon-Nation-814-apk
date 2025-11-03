@@ -8,7 +8,9 @@
     },
     "extra": {
       "webUrl": "https://toon-nation-814.onrender.com",
-      "eas": { "projectId": "d5b78986-183a-4c6e-b9e2-2ab60332a5d2" }
+      "eas": {
+        "projectId": "d5b78986-183a-4c6e-b9e2-2ab60332a5d2"
+      }
     }
   }
 }
