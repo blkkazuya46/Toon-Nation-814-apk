@@ -1,10 +1,15 @@
+
 name: build-android
+
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build-android:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -13,6 +18,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Install Expo & EAS CLI
         run: |
@@ -26,21 +32,26 @@ jobs:
           fi
 
       - name: Login to Expo using token
+        run: eas whoami || expo whoami || echo "🔐 Using token auth"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          eas whoami || true
 
+      # Link (or reuse) EAS project without interactivity
       - name: Ensure EAS project is linked
+        run: |
+          set -e
+          # If already linked, project:info succeeds; otherwise init with --force-non-interactive
+          eas project:info || eas init --id $(uuidgen) --force --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies (best effort)
         run: |
-          eas project:info || true
-          eas init --id d5b78986-183a-4c6e-b9e2-2ab60332a5d2 --non-interactive --force
+          if [ -f package-lock.json ]; then npm ci; else npm i; fi
 
       - name: Build Android (APK)
+        run: |
+          eas build --platform android --profile production --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: |
-          eas build --platform android --profile preview --non-interactive
 
