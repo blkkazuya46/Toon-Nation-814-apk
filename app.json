@@ -1,16 +1,17 @@
 {
   "expo": {
     "name": "Toon Nation 814",
-    "slug": "toon-nation-814-apk",
+    "slug": "toon-nation-814",
+    "scheme": "toon814",
+    "owner": "<your-expo-username>",
+    "runtimeVersion": { "policy": "appVersion" },
     "version": "1.0.0",
     "orientation": "portrait",
-    "updates": { "enabled": false },
+    "plugins": [],
     "android": {
       "package": "com.toonnation814.app",
       "versionCode": 1
-    },
-    "extra": {
-      "webUrl": "https://toon-nation-814.onrender.com"
     }
   }
 }
+
