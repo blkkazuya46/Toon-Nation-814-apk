@@ -3,15 +3,14 @@
     "name": "Toon Nation 814",
     "slug": "toon-nation-814",
     "scheme": "toon814",
-    "owner": "<your-expo-username>",
-    "runtimeVersion": { "policy": "appVersion" },
     "version": "1.0.0",
     "orientation": "portrait",
-    "plugins": [],
+    "extra": {
+      "webUrl": "https://toon-nation-814.onrender.com"
+    },
     "android": {
       "package": "com.toonnation814.app",
       "versionCode": 1
     }
   }
 }
-
