@@ -1,12 +1,17 @@
 {
-  "cli": { "version": ">= 13.0.0" },
+  "cli": { "version": ">= 11.0.0" },
   "build": {
     "production": {
+      "autoIncrement": "version",
+      "node": "20.11.1",
       "android": { "buildType": "apk" }
     },
-    "development": {
+    "preview": {
       "developmentClient": true,
-      "android": { "buildType": "apk" }
+      "android": { "gradleCommand": ":app:assembleDebug" }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }
